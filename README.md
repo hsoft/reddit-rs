@@ -10,11 +10,11 @@ Early development, incomplete featureset
 
 * Fetch the frontpage listing.
 * Fetch subsequent pages.
+* Subreddit listings
 
 Coming soon:
 
 * Authentication
-* Subreddit listings
 
 ## Example
 
