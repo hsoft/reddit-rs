@@ -22,7 +22,7 @@ Coming soon:
 use reddit::Listing;
 
 // Get the front page listing, unauthenticated.
-let listing = Listing::get().unwrap();
+let listing = Listing::get_frontpage().unwrap();
 for link in listing.links().iter() {
     println!("{} {}", link.url(), link.title());
 }
