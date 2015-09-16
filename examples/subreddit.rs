@@ -19,8 +19,9 @@ fn print_listing(listing: &Listing) {
 }
 
 fn main() {
-    let listing = Listing::get_frontpage().unwrap();
+    let listing = Listing::get_subreddit("rust").unwrap();
     print_listing(&listing);
     println!("Oh, and here's a second page, because we can!");
     print_listing(&listing.next().unwrap());
 }
+

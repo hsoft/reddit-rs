@@ -68,28 +68,43 @@ impl Decodable for Link {
 }
 
 pub struct Listing {
+    subreddit: Option<String>,
     links: Vec<Link>,
     after: Option<String>,
 }
 
 impl Listing {
-    fn get_with_params(params: &[(&str, &str)]) -> Result<Listing, ClientError> {
-        let mut url = "https://www.reddit.com/.json".to_owned();
-        if params.len() > 0 {
-            let params_str = params.iter().fold("".to_owned(), |mut s, &(k, v)| { s.push_str(&format!("{}={}", k, v)); s });
-            url.push('?');
-            url.push_str(&params_str);
+    fn get_with_params(subreddit: Option<&str>, params: &[(&str, &str)]) -> Result<Listing, ClientError> {
+        const URL: &'static str = "https://www.reddit.com/";
+        let param_str = if params.len() > 0 {
+            params.iter().fold("?".to_owned(), |mut s, &(k, v)| { s.push_str(&format!("{}={}", k, v)); s })
         }
+        else {
+            "".to_owned()
+        };
+        let subreddit_str = match subreddit {
+            Some(s) => format!("r/{}", s),
+            None => "".to_owned(),
+        };
+        let url = format!("{}{}.json{}", URL, subreddit_str, param_str);
         let resp = curl::http::handle().get(url).exec().unwrap();
         let body = String::from_utf8(resp.get_body().iter().map(|&u| u).collect()).unwrap();
-        match json::decode(&body) {
+        let mut result: Listing = try!(match json::decode(&body) {
             Ok(val) => Ok(val),
             Err(_) => Err(ClientError::Oops),
+        });
+        if let Some(s) = subreddit {
+            result.subreddit = Some(s.to_owned());
         }
+        Ok(result)
     }
 
-    pub fn get() -> Result<Listing, ClientError> {
-        Self::get_with_params(&[])
+    pub fn get_frontpage() -> Result<Listing, ClientError> {
+        Self::get_with_params(None, &[])
+    }
+
+    pub fn get_subreddit(name: &str) -> Result<Listing, ClientError> {
+        Self::get_with_params(Some(name), &[])
     }
 
     pub fn links(&self) -> &Vec<Link> {
@@ -97,11 +112,12 @@ impl Listing {
     }
 
     pub fn next(&self) -> Result<Listing, ClientError> {
+        let subreddit = self.subreddit.as_ref().map(|s| &s[..]);
         let params = match self.after {
             Some(ref after) => vec![("after", &after[..])],
             None => vec![],
         };
-        Self::get_with_params(&params[..])
+        Self::get_with_params(subreddit, &params[..])
     }
 }
 
@@ -121,6 +137,8 @@ impl Decodable for Listing {
                 }));
                 let after: Option<String> = d.read_struct_field("after", 0, Decodable::decode).ok();
                 Ok(Listing {
+                    // filled outside of the decode phase.
+                    subreddit: None,
                     links: links,
                     after: after,
                 })
